@@ -25,6 +25,6 @@ In `static` are the test files that I used. The performance data is stored in `2
 and see the tree by clicking `Reingold-Tilford tree` at the top of the page at http://0.0.0.0:8001/.
 
 # Known issues
-
+If a purple tree does not appear when you click `Reingold-Tilford tree`, try entereing `http://0.0.0.0:8001/rt_tree2` into the address bar.
 
 
