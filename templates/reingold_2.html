@@ -1,144 +1,14 @@
 <!DOCTYPE html>
 <!--
-Adapted for tree.py 5/1
+Katy worked on 6/7
+Need to convert back to average time
 -->
 <head>
 <title>Slider Reingold-Tilford Tree</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="shortcut icon" href="#"/>
-
-<style>
-
-    p {
-        font: 12px sans-serif;
-    }
-    .node {
-      cursor: pointer;
-    }
-
-    .node circle {
-      fill: #fff;
-      stroke: steelblue;
-      stroke-width: 2px; /*1.5px; katy - may need to adjust so eyes can see pattern*/
-    }
-
-    .node text {
-      font: 10px sans-serif;
-    }
-
-    .link {
-      fill: none;
-      stroke: #ccc;
-      stroke-width: 2px;
-    }
-
-    .d3-tip {
-      line-height: 1;
-      padding: 6px;
-      background: rgba(0, 0, 0, 0.8);
-      color: #fff;
-      border-radius: 4px;
-      font-size: 12px;
-    }
- 
-    /* Creates a small triangle extender for the tooltip */
-    .d3-tip:after {
-      box-sizing: border-box;
-      display: inline;
-      font-size: 10px;
-      width: 100%;
-      line-height: 1;
-      color: rgba(0, 0, 0, 0.8);
-      content: "\25BC";
-      position: absolute;
-      text-align: center;
-      font: 12px sans-serif;
-    }
- 
-    /* Style northward tooltips specifically */
-    .d3-tip.n:after {
-      margin: -2px 0 0 0;
-      top: 100%;
-      left: 0;
-    }
-
-    .ticks {
-  font: 10px sans-serif;
-}
-
-.track,
-.track-inset,
-.track-overlay {
-  stroke-linecap: round;
-}
-
-.track {
-  stroke: #000;
-  stroke-opacity: 0.3;
-  stroke-width: 10px;
-}
-
-.track-inset {
-  stroke: #ddd;
-  stroke-width: 8px;
-}
-
-.track-overlay {
-  pointer-events: stroke;
-  stroke-width: 50px;
-  stroke: transparent;
-  cursor: crosshair;
-}
-
-.handle {
-  fill: #fff;
-  stroke: #000;
-  stroke-opacity: 0.5;
-  stroke-width: 1.25px;
-}
-    
-    
-#shapekey {
-    position: absolute;
-    text-align: left;
-    padding: 2px;
-    font: 12px sans-serif;
-    background: lightsteelblue;
-    border: 0px;
-    border-radius: 8px;
-    display: inline-block;
-    white-space: nowrap;
-}
-#navigate {
-    display: inline-block;
-    background: lightsteelblue;
-    padding: 2px;
-    border-radius: 8px
-}
-
-#legend {
-    width: 300px;
-    height: 100px;
-    /*position: absolute;*/
-    display: inline-block;
-}
-
-.node-line-key {
-    height: 10px;
-    width: 20px;
-}
-.node-shape-triangle {
-    height: 15px;
-    width: 20px;
-}
-.node-shape-circle {
-    height: 12px;
-    width: 20px;
-}
-
-
-</style>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 <!--    <div id="navigate">
@@ -150,109 +20,134 @@ Adapted for tree.py 5/1
     </div>-->
     <div id="shapekey">
         <p>Node key</p>
-        <p><svg class="node-shape-triangle"></svg> node has children</p>
-        <p><svg class="node-shape-circle"></svg> circles node has no children </p>
+        <p><svg class="node-shape-triangle"></svg> subtree hidden </p>
+        <p><svg class="node-shape-circle"></svg>  no hidden subtree </p>
         <p><svg class="node-line-key"><path d="M 2 5 L 18 5" stroke-dasharray = "3,3" stroke="black"/></svg> synchronous (direct)</p>
         <p><svg class="node-line-key"><path d="M 2 5 L 18 5" stroke="black"/></svg> asynchronous (normal)</p>
         <p><svg class="node-line-key"><path d="M 2 5 L 18 5" stroke-dasharray="3,1" stroke="black"/></svg> undecided</p>
+        <p>Inclusive <label class="toggleswitch"><input type="checkbox" id="myCheck" onclick="toggleSwitchAction()"><span class="slider"></span></label> Exclusive </p>
     </div>
+    <div id="code-view" style="height: 500px; overflow:scroll;"><span v-html="rawHtml"></span></div>
     <div id="legend"></div>
-    <div id="vis"></div>
+    <div id="tree-vis"></div>
 <!-- Copyright 2011 Jason Davies https://github.com/jasondavies/newick.js -->
 <script>function parseNewick(a){for(var e=[],r={},s=a.split(/\s*(;|\(|\)|,|:)\s*/),t=0;t<s.length;t++){var n=s[t];switch(n){case"(":var c={};r.branchset=[c],e.push(r),r=c;break;case",":var c={};e[e.length-1].branchset.push(c),r=c;break;case")":r=e.pop();break;case":":break;default:var h=s[t-1];")"==h||"("==h||","==h?r.name=n:":"==h&&(r.length=parseFloat(n))}}return r}</script>
 
 <!-- Copyright 2016 Mike Bostock https://d3js.org -->
-<script src="//d3js.org/d3.v4.min.js"></script>
-<script src="../static/d3-tip.js"></script>
+<script src="{{ url_for('static', filename='d3.v4.min.js') }}"></script>
+<script src="{{ url_for('static', filename='d3-tip.js') }} "></script>
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
 
 <!-- https://bl.ocks.org/d3noob/43a860bc0024792f8803bba8ca0d5ecd -->
 <script>
-    var symbol = d3.symbol().size([100]);
-    
-    d3.selectAll(".node-shape-triangle").insert("g")
-            .selectAll("path").data(["triangle"]).enter()
-            .append("path")
-            .attr("d", symbol.type(function(d) {
-                return d3.symbolTriangle;
-            }))
-            .attr("transform", "rotate(-90)")
-            .attr("transform", "translate(10,9)")
-            .style("stroke", "black")
-            .style("fill", "white");
-    d3.selectAll(".node-shape-circle").insert("g")
-            .selectAll("path").data(["circle"]).enter()
-            .append("path")
-            .attr("d", symbol.type(function(d) {
-                return d3.symbolCircle;
-            }))
-            .attr("transform", "translate(10,6)")
-            .style("stroke", "black")
-            .style("fill", "white");
+var symbol = d3.symbol().size([100]);
+
+d3.selectAll(".node-shape-triangle").insert("g")
+        .selectAll("path").data(["triangle"]).enter()
+        .append("path")
+        .attr("d", symbol.type(function(d) {
+            return d3.symbolTriangle;
+        }))
+        .attr("transform", "rotate(-90)")
+        .attr("transform", "translate(10,9)")
+        .style("stroke", "black")
+        .style("fill", "white");
+d3.selectAll(".node-shape-circle").insert("g")
+        .selectAll("path").data(["circle"]).enter()
+        .append("path")
+        .attr("d", symbol.type(function(d) {
+            return d3.symbolCircle;
+        }))
+        .attr("transform", "translate(10,6)")
+        .style("stroke", "black")
+        .style("fill", "white");
+d3.selectAll(".node-shape-cross").insert("g")
+        .selectAll("path").data(["cross"]).enter()
+        .append("path")
+        .attr("d", symbol.type(function(d) {
+            return d3.symbolCross;
+        }))
+        .attr("transform", "translate(10,6)")
+        .style("stroke", "black")
+        .style("fill", "white");
+
     
 // Set the dimensions and margins of the diagram
-var margin = {top: 20, right: 90, bottom: 30, left: 90},
+var margin = {top: 50, right: 90, bottom: 30, left: 90},
     width = 860 - margin.left - margin.right,
-    height = 600 - margin.top - margin.bottom;
+    height = 1600 - margin.top - margin.bottom;
 
 /* http://bl.ocks.org/davegotz/bd54b56723c154d25eedde6504d30ad7 */
 var tool_tip = d3.tip()
       .attr("class", "d3-tip")
       .offset([-8, 0])
-      .html(function(d){ //katy
-      
-          if (d.id === 1) {
-              return "<p>Function: " + d.data.name + "</p>";
-          }
+      .html(function(d){ 
+//          if (d.id === 1) {
+//              return "<p>Function: " + d.data.name + "</p>";
+//          }
           if (d._perfdata.eval_direct === 0) { // 0 async
               return "<p>Primitive instance: " + d._perfdata.display_name + "</p>"+
                     "<p>Count: " + d._perfdata.count + "</p>" +
-                    "<p>Total time: " + prettyprintTime(d._perfdata.time) + " </p>" +
-                    "<p>Exclusive time: " + prettyprintTime(d._perfdata.exclusiveTime) + " </p>";
+                    "<p>Exclusive time: " + prettyprintTime(d._perfdata.exclusiveTime) + " </p>" +
+                    "<p>Inclusive time (async): " + prettyprintTime(d._perfdata.inclusiveTime) + " </p>";
           } else if (d._perfdata.eval_direct === 1) { // 1 direct
               return "<p>Primitive instance: " + d._perfdata.display_name + "</p>" +
                     "<p>Count: " + d._perfdata.count + "</p>" +
-                    "<p>Total time: " + prettyprintTime(d._perfdata.time) + " </p>" +
-                    "<p>Exclusive time: " + prettyprintTime(d._perfdata.exclusiveTime) + " </p>";
+                    "<p>Exclusive time: " + prettyprintTime(d._perfdata.exclusiveTime) + " </p>" +
+                    "<p>Inclusive time (direct): " + prettyprintTime(d._perfdata.inclusiveTime) + " </p>";
           } else if (d._perfdata.eval_direct === -1) { // -1 undecided
               return "<p>Primitive instance: " + d._perfdata.display_name + "</p>" +
                     "<p>Count: " + d._perfdata.count + "</p>" +
-                    "<p>Total time: " + prettyprintTime(d._perfdata.time) + " </p>" +
                     "<p>Exclusive time: " + prettyprintTime(d._perfdata.exclusiveTime) + " </p>" +
+                    "<p>Inclusive time (undecided): " + prettyprintTime(d._perfdata.inclusiveTime) + " </p>" +
                     "<p>Evaluation style (direct or async) determined at runtime.</p>"; 
           } else {
               return "<p>Primitive instance: " + d._perfdata.display_name + "</p>" +
-                      "<p>Total time: " + prettyprintTime(d._perfdata.time) + " </p>" +
-                    "<p>Exclusive time: " + prettyprintTime(d._perfdata.exclusiveTime) + " </p>";
+                      "<p>Total time: " + prettyprintTime(d._perfdata.time) + " </p>";
           }
         });
 
-var svg = d3.select("#vis").append("svg")
+var svg = d3.select("#tree-vis").append("svg")
     .attr("width", width + margin.right + margin.left)
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
     .attr("transform", "translate("
           + margin.left + "," + margin.top + ")");
-  var i = 0,
-    duration = 750,
+var duration = 750,
     root;
+    
 svg.call(tool_tip);
+
 
 // declares a tree layout and assigns the size
 var treemap = d3.tree().size([(height-margin.bottom), width]);
 
-var treemat = [1];
+//Create a Vue for the code-view
+vmcode = new Vue({
+            el: '#code-view',
+            data: {
+                rawHtml: '<p style=\"font: \"Courier\";\">0 | Code View</p>',
+                windowWidth: window.height
+            }
+        });
+
+codeData = makeCodeArray("{{ url_for('static', filename='als2.physl') }}");
 
 d3.queue()
 //        .defer(d3.text, "20180406_flag_tree.txt")
 //        .defer(d3.csv, "20180406_flag_perfdata.csv")
-        // .defer(d3.text, "20180501_tree.txt")
-        // .defer(d3.csv, "20180501_perf.csv")
-        .defer(d3.text, "{{ treeformat }}")
-        .defer(d3.csv, "{{ perfdata }}")
+//        .defer(d3.text, "20180501_tree.txt")
+//        .defer(d3.csv, "20180501_perf.csv")
+//        .defer(d3.text, "20180625_treeformat_alsmovie.txt")
+//        .defer(d3.csv, "20180625_perfdata_alsmovie.csv")
+        .defer(d3.text, "{{ url_for('static', filename='20180713_als_tree.txt') }}")
+        .defer(d3.csv, "{{ url_for('static', filename='20180713_als_perfdata.csv') }}")
         .await(analyze);
 
 function analyze(error, treeformat, perfdata) {
     if (error) throw error;
+
     // Assigns parent, children, height, depth
     root = d3.hierarchy(parseNewick(treeformat), function(d) { return d.branchset; });
     root.x0 = height / 2;
@@ -261,7 +156,9 @@ function analyze(error, treeformat, perfdata) {
     //root.children.forEach(collapse); //katy
     
     // Collecting the performance times
-    domainTimes = [];
+    domainTimes = [],
+            domainTimesEx = [],
+            domainTimesIn = [];
     prim_inst = [];
     perfdata.map(function(d){
 //        var avgTime = (+d.time)/(+d.count); //kttime
@@ -269,28 +166,29 @@ function analyze(error, treeformat, perfdata) {
 //            domainTimes.push(avgTime); //katy check times * 1.e-9);
 //        }
         domainTimes.push(+d.time); //kttime
+        domainTimesIn.push(+d.time); //kttime
         prim_inst.push(d.primitive_instance);
     });
-    //console.log(d3.extent(domainTimes));
+    
 
-    var colors = ["#edf8fb", "#b2e2e2", "#66c2a4", "#2ca25f", "#006d2c"]; //green
-    //var colors = ["#eff3ff", "#bdd7e7", "#6baed6", "#3182bd", "#08519c"];  //blue
+    colorsGr = ["#edf8fb", "#b2e2e2", "#66c2a4", "#2ca25f", "#006d2c"]; //green
+    colorsPur = ["#f2f0f7", "#cbc9e2", "#9e9ac8", "#756bb1", "#54278f"];  //blue
     colorTimeScale = d3.scaleQuantize() //went with log scale
-                .domain(d3.extent(domainTimes)) //domainTimes //kttime [0,10088524656]
-                .range(colors);
-    console.log("DomainTimes ", d3.extent(domainTimes));
+                .domain(d3.extent(domainTimesIn)) //domainTimes //kttime [0,10088524656]
+                .range(colorsPur);
     //gotta get the domain values for each color
-    domainVals = [colorTimeScale.invertExtent(colors[0])[0]];
-    greatestVal = colorTimeScale.invertExtent(colors[colors.length-1])[1];
-    for (var i=0; i<colors.length; i++){
-        domainVals.push(colorTimeScale.invertExtent(colors[i])[1]);
+    domainVals = [colorTimeScale.invertExtent(colorsPur[0])[0]];
+    greatestVal = colorTimeScale.invertExtent(colorsPur[colorsPur.length-1])[1];
+    for (var i=0; i<colorsPur.length; i++){
+        domainVals.push(colorTimeScale.invertExtent(colorsPur[i])[1]);
     }
     
+    timetype = "INCLUSIVE";
       // ****************** Slider section **************************
 threshold =  0;
 
 slider_x = d3.scaleLinear()
-             .domain([0,d3.extent(domainTimes)[1]]) //katy greatestVal
+             .domain([0,d3.extent(domainTimesIn)[1]]) //katy greatestVal
              .range([0, 500])
              .clamp(true);
 slider = svg.append("g")
@@ -308,7 +206,7 @@ slider.append("line")
          .on("start.interrupt", function() { slider.interrupt(); })
          .on("start drag", function() { 
              //closeNodes(slider_x.invert(d3.event.x));
-             update(root, perfdata, slider_x.invert(d3.event.x));
+             update(root, perfdata, slider_x.invert(d3.event.x), timetype);
      }));
      
      
@@ -337,69 +235,67 @@ handle = slider.insert("circle", ".track-overlay")
          .attr("class", "handle")
          .attr("r", 9);
 
-    update(root, perfdata, threshold);
+    update(root, perfdata, threshold, timetype);
     
-    addLegend(domainVals, greatestVal, colors);
-    
-    count = 1; //count the root
-    countNodes(root);
-}
-
-// Collapse the node and all it's children
-function collapse(d) {
-  
-  if(d.children) {
-    d._children = d.children;
-    d._children.forEach(collapse);
-    d.children = null;
-  }
-}
-
-
-
-function addLegend(domainVals, greatestVal, colors) {
-
-    var x = d3.scaleLinear()
+    x = d3.scaleLinear()
         .domain([0, greatestVal])
         .range([0, 300]);
 
-    var xAxis = d3.axisBottom(x)
+    xAxis = d3.axisBottom()
+        .scale(x)
         .tickSize(13)
         .tickValues(domainVals)
         .tickFormat(function(d) { return prettyprintTime(d); }); // === 0.5 ? formatPercent(d) : formatNumber(100 * d); });
 
    
     var g = d3.select("#legend").append("svg")
-        .attr("width", 600 + margin.right + margin.left)
-        .attr("height", 45 + margin.bottom)
+            .attr("class", "legend")
+        .attr("width", 600)
+        .attr("height", 45)
       .append("g")
-        .attr("transform", "translate(250,50)")
-              //+ margin.left + "," + margin.top + ")")
-              .call(xAxis);
+        .attr("class", "x axis")
+        .attr("transform", "translate(200,18)")
+        .call(xAxis);
 
     g.select(".domain")
         .remove();
-    
-    g.selectAll("rect")
-      .data(colorTimeScale.range().map(function(color) {
-        var d = colorTimeScale.invertExtent(color);
-        if (d[0] == null) d[0] = x.domain()[0];
-        if (d[1] == null) d[1] = x.domain()[1];
-        return d;
-      }))
-      .enter().insert("rect", ".tick")
-        .attr("height", 8)
-        .attr("x", function(d) { return x(d[0]); })
-        .attr("width", function(d) { return x(d[1]) - x(d[0]); })
-        .attr("fill", function(d) { return colorTimeScale(d[0]); });
-
+    if (timetype === "EXCLUSIVE") {
+        g.selectAll("rect")
+          .data(colorExTimeScale.range().map(function(color) {
+            var d = colorExTimeScale.invertExtent(color);
+            if (d[0] == null) d[0] = x.domain()[0];
+            if (d[1] == null) d[1] = x.domain()[1];
+            return d;
+          }))
+          .enter().insert("rect", ".tick")
+            .attr("height", 8)
+            .attr("x", function(d) { return x(d[0]); })
+            .attr("width", function(d) { return x(d[1]) - x(d[0]); })
+            .attr("fill", function(d) { return colorExTimeScale(d[0]); });
+    }
+    else {
+        g.selectAll("rect")
+          .data(colorInTimeScale.range().map(function(color) {
+            var d = colorInTimeScale.invertExtent(color);
+            if (d[0] == null) d[0] = x.domain()[0];
+            if (d[1] == null) d[1] = x.domain()[1];
+            return d;
+          }))
+          .enter().insert("rect", ".tick")
+            .attr("height", 8)
+            .attr("x", function(d) { return x(d[0]); })
+            .attr("width", function(d) { return x(d[1]) - x(d[0]); })
+            .attr("fill", function(d) { return colorInTimeScale(d[0]); });
+    }
     g.append("text")
         .attr("fill", "#000")
         .attr("font-weight", "bold")
         .attr("text-anchor", "start")
         .attr("y", -6)
-        .text("Average time per instance");   
+        .text("Average time per instance"); 
     
+    //count = 1; //count the root
+    //countNodes(root);
 }
 
 // Count the number of nodes at each level
@@ -417,7 +313,7 @@ function countNodes(node) {
     }
 }
 
-function update(source, perfdata, threshold) {
+function update(source, perfdata, threshold, timetype) {
   
   handle.attr("cx", slider_x(threshold));
   sliderText.text(prettyprintTime(threshold))
@@ -444,19 +340,22 @@ function update(source, perfdata, threshold) {
 
 
   // ****************** Nodes section ***************************
-
+ i = 0;
   // Update the nodes...
   var node = svg.selectAll('g.node')
       .data(nodes, function(d) {
           var nodename = d.data.name;
           // Change time to time-per-instance //katy
           if (prim_inst.indexOf(nodename) >= 0) {
+              //Necessary for tooltip
             node_perfdata = perfdata[prim_inst.indexOf(nodename)]; 
-            
+    
             node_perfdata.eval_direct = +node_perfdata.eval_direct; //how the node was run (async/sync/unk)
-            node_perfdata.avg_time = node_perfdata.time ; //kttime (node_perfdata.time / node_perfdata.count); // * 1.e-9; //katy nanos are SMALL
+            node_perfdata.avg_time = +(node_perfdata.time / node_perfdata.count); // * 1.e-9; //katy nanos are SMALL
             if (+node_perfdata.count === 0) node_perfdata.avg_time = node_perfdata.time;
             if (!node_perfdata.avg_time) node_perfdata.avg_time = 0;
+            
+            //Necessary for tree-vis
             d._perfdata = perfdata[prim_inst.indexOf(nodename)];  
             d._perfdata.save_display_name = d._perfdata.display_name;
           }
@@ -467,22 +366,49 @@ function update(source, perfdata, threshold) {
      d.childrenTime = 0;
      if (d.children) {
          for (child of d.children) {
-             d.childrenTime += +(child._perfdata.avg_time);
+             //d.childrenTime += +(child._perfdata.time); //sum children
+             if (child._perfdata.time > d.childrenTime) {
+                 d.childrenTime = child._perfdata.time;
+             }
          }
      }
      if (d._perfdata) {
-         d._perfdata.exclusiveTime = d._perfdata.avg_time - d.childrenTime;
-         //console.log(d, d._perfdata.exclusiveTime);
+         d._perfdata.exclusiveTime = d._perfdata.time - d.childrenTime;
+         d._perfdata.inclusiveTime = +d._perfdata.time;
          //Katy
+         domainTimesEx.push(d._perfdata.exclusiveTime);
+         domainTimesIn.push(d._perfdata.inclusiveTime);
      }
  });
+
+greatestValEx = d3.extent(domainTimesEx)[1];
+greatestValIn = d3.extent(domainTimesIn)[1];
+
+colorExTimeScale = d3.scaleQuantize() //went with log scale
+                .domain([0, d3.extent(domainTimesEx)[1]]) //domainTimes //kttime issue
+                .range(colorsGr);
+    //gotta get the domain values for each color
+    domainValsEx = [colorExTimeScale.invertExtent(colorsGr[0])[0]];
+    greatestValEx = colorExTimeScale.invertExtent(colorsGr[colorsGr.length-1])[1];
+    for (var i=0; i<colorsGr.length; i++){
+        domainValsEx.push(colorExTimeScale.invertExtent(colorsGr[i])[1]);
+    }
+    
+colorInTimeScale = d3.scaleQuantize() //went with log scale
+                .domain(d3.extent(domainTimesIn)) //domainTimes 
+                .range(colorsPur);
+    //gotta get the domain values for each color
+    domainValsIn = [colorInTimeScale.invertExtent(colorsPur[0])[0]];
+    greatestValIn = colorInTimeScale.invertExtent(colorsPur[colorsPur.length-1])[1];
+    for (var i=0; i<colorsPur.length; i++){
+        domainValsIn.push(colorInTimeScale.invertExtent(colorsPur[i])[1]);
+    }
  
- node.each(function(d){
-     
+/*node.each(function(d){
      if (d._perfdata) {
          //Closing nodes below threshold
          if ((d._perfdata.avg_time < threshold) && (d.children)) { //katy
-             console.log(threshold);
+            
               if (d.children) {
                 d._children = d.children;
                 d.children = null;
@@ -492,6 +418,7 @@ function update(source, perfdata, threshold) {
                 d._children = null;
               }
          }
+         
          //Reopening nodes above threshold
 //         else if (//(d._perfdata.avg_time >= threshold) && 
 //                 (d.children === null) && 
@@ -500,18 +427,20 @@ function update(source, perfdata, threshold) {
 //             d._children = null;
 //         }
      }
- });
+ });*/
  
         // Enter any new modes at the parent's previous position.
   var nodeEnter = node.enter().append('g')
       .attr('class', 'node')
+      .attr('id', function(d) {showNodeCode(d); return d.id;})
       .attr("transform", function(d) {
         return "translate(" + source.y0 + "," + source.x0 + ")";
     })  
-    .on('click', click) 
+    .on('click', click)
     .on("mouseenter", tool_tip.show)
     .on("mouseout", tool_tip.hide);
 
+    
   // Add Circle for the nodes
 //  nodeEnter.append('circle')
 //      .attr('class', 'node')
@@ -531,23 +460,23 @@ function update(source, perfdata, threshold) {
     // new
     //"/phylanx/call-function$2$lra/2$33$5","call-function/lra(33, 5)",1,377929000,-1
     var symbol = d3.symbol().size([150]);
+    aNodeIsHighlighted = false;
+    oldColor = "";
+    oldNode = "";
     nodeEnter
         .append("path")
         .attr("class", "node plain-circle")
-        .attr("d", symbol.type(function(d){
-//            return d3.symbolCircle;
-            if (d.children) {
-                return d3.symbolTriangle;
-            } else {
-                return d3.symbolCircle;
-            }
-        }))
+        .attr("d", symbol.type(function(d) {
+            //closeLineChildren(d); //katy line close
+            //if (d.linenode) { console.log("cross"); return d3.symbolCross; }
+            return d3.symbolCircle;
+    }))
         .attr('transform', "rotate(-90)")
         .attr("stroke-dasharray", function(d){ //stroke solid/dashed by direct or not
           if (d._perfdata) {
               if (d._perfdata.eval_direct === 1) {
                   return "3, 3"; 
-              } else if (d._perfdata.eval_direct == -1) {
+              } else if (d._perfdata.eval_direct === -1) {
                   return "3,1";
               } else { return "0"; }
           }
@@ -556,30 +485,52 @@ function update(source, perfdata, threshold) {
         .style("stroke", "black")
         .style("fill", function(d) { //katy
         if (d._perfdata) { //color circle by time-per-instance
-//            if (d._perfdata.avg_time > 0) {
-//                return colorTimeScale(d._perfdata.avg_time);
-//            }
-            if (d._perfdata.exclusiveTime > 0) {
-                return colorTimeScale(d._perfdata.exclusiveTime);
-            } else if (d._perfdata.exclusiveTime < 0) {
+            if (timetype === "EXCLUSIVE") {
+                if (d._perfdata.exclusiveTime >= 0) {
+                    return colorExTimeScale(d._perfdata.exclusiveTime);
+                } else if (d._perfdata.exclusiveTime < 0) {
+                    console.log("HERE - negative exclusive Time");
+                    return "magenta";
+                }
                 return "magenta";
             }
-            return "#fff";
+            else if (timetype === "INCLUSIVE") {
+                if (d._perfdata.inclusiveTime >= 0) {
+                    return colorInTimeScale(d._perfdata.inclusiveTime);
+                } else if (d._perfdata.inclusiveTime < 0) {
+                    return "magenta";
+                }
+                return "magenta";
+            }
         }
-        return "#fff";
+        return "white";
+        })
+        .on("mouseover", function(d) { 
+            if (aNodeIsHighlighted) {
+                oldNode.style("fill", oldColor);
+            }
+            oldColor = d3.select(this).style("fill"); 
+            oldNode = d3.select(this);
+            d3.select(this).style("fill", "yellow"); 
+            aNodeIsHighlighted = true;
+            showNodeCode(d);
+            
+        })
+        .on("mouseout", function(d) { 
+            //d3.select(this).style("fill", oldColor); 
+            hideNodeCode(d);
+            
         });
-        
-//    nodeEnter.append("path").attr("class", "node hidden-tree")
-//        .attr("d", symbol.type(d3.symbolTriangle))
-//        .attr("transform", "rotate(-90)")
-//        .attr("stroke-dasharray", function(d){ if (d.perfdata){ 
-//                return (d._perfdata.eval_direct === 1) ? "3,3":"0";
-//        } return "0";
-//        }).style("stroke", "black")
-//                .style("fill", "magenta")
-//                .style("display", "none");
-        
-
+//    nodeEnter.append("path")
+//            .attr("class", "node linenode")
+//            .attr("d", symbol.type(function(d){
+//                if (closeLineChildren(d)) {
+//                        return d3.symbolCross;
+//                } else { 
+//                    return d3.symbolCircle; 
+//                }
+//            }))
+//            .style("fill", "orange");
 
 // Add labels for the nodes
   nodeEnter.append('text')
@@ -592,11 +543,12 @@ function update(source, perfdata, threshold) {
       })
       .text(function(d) { 
           if (!d.children) {
-            return d._perfdata.display_name; 
+            return d._perfdata.display_name;              
           } else {
               return "";
           }
       });
+    
 
   // UPDATE
   var nodeUpdate = nodeEnter.merge(node);
@@ -610,15 +562,19 @@ function update(source, perfdata, threshold) {
 
   // Update the node attributes and style
   nodeUpdate.select('circle.node')
-    .attr('r', 10)
+    .attr('r', 12)
     .style("fill", function(d) { //katy
         if (d._perfdata) { //color circle by time-per-instance
-            if (d._perfdata.avg_time > 0) {
-                return colorTimeScale(d._perfdata.avg_time);
+            toggleswitch = d3.select("#myCheck");
+            if (toggleswitch.checked) {
+                return colorInTimeScale(d._perfdata.inclusiveTime); //avg_Time
+            } else {
+                return colorExTimeScale(d._perfdata.exclusiveTime);
             }
         }
     })
     .attr('cursor', 'pointer');
+    
 
   // Remove any exiting nodes
   var nodeExit = node.exit().transition()
@@ -636,6 +592,7 @@ function update(source, perfdata, threshold) {
   nodeExit.select('text')
     .style('fill-opacity', 1e-6);
     
+
 
   // ****************** links section ***************************
 
@@ -673,8 +630,6 @@ function update(source, perfdata, threshold) {
     d.y0 = d.y;
   });
   
-
-
   //  addSlider(domainVals, greatestVal); //katy working-ish
   // Creates a curved (diagonal) path from parent to the child nodes
   function diagonal(s, d) {
@@ -686,18 +641,110 @@ function update(source, perfdata, threshold) {
 
     return path;
   }
+  
+  function closeLineChildren(d) {
+      var myLineNum = getLineNum(d);
+      if (d.children) {
+          for (k in d.children) {
+              var childNum = getLineNum(d.children[k]);
+              if (childNum === myLineNum) {
+                  d.linenode = true;
+                  if (d.parent.linenode) {
+                      d.x = d.parent.x;
+                      d.y = d.parent.y;
+                      d.linenode = false;
+                  }
+                  if (!d.children[k].children) {
+                      d.x = d.parent.x;
+                      d.y = d.parent.y;
+                      d.leafnode = true;
+                      d.linenode = false;
+                      return false;
+                  }
+                  return true;
+              } else { return false; }
+          }
+      }
+  }
+  
 
+  function showNodeCode(d) {
+    linenum = getLineNum(d);
+    if (linenum > -1) {
+        //linenum = linenum + offset;
+        //console.log(linenum, linenum-offset);
+//        d3.select("pre").attr("data-start", linenum);
+//        var aa = linenum-2,
+//            bb = linenum-1, 
+//            cc = linenum, 
+//            dd = linenum+1, 
+//            ee = linenum+2;
+        var codeViewText = "";
+        for (i=0; i<codeArray.length; i++) {
+            if (i < 9) {
+                if (i === linenum - 1) {
+                    codeViewText += "<pre style=\"background-color:yellow; margin-bottom: -12px; \">" + (i+1) + "  | " + codeArray[i] + "</pre>";
+                } else {
+                    codeViewText += "<pre style=\"margin-bottom: -12px;\">" + (i+1) + "  | " + codeArray[i] + "</pre>";
+                }
+            } else {
+                if (i === linenum - 1) {
+                    codeViewText += "<pre style=\"background-color:yellow; margin-bottom: -12px;\">" + (i+1) + " | " + codeArray[i] + "</pre>";
+                } else {
+                    codeViewText += "<pre style=\"margin-bottom: -12px;\">" + (i+1) + " | " + codeArray[i] + "</pre>";
+                }
+            }
+        }
+        vmcode.rawHtml = codeViewText;
+        
+        //vmcode.rawHtml = "<p>" + (aa-offset) + " | " + codeArray[aa-1] + "</p><p>" + (bb-offset) + " | " + codeArray[bb-1] + "</p><p style=\"background-color:yellow;\">" + (cc-offset) + " | " + codeArray[cc-1] + "</p><p>" + (dd-offset) + " | " + codeArray[dd-1] + "</p><p>" + (ee-offset) + " | " + codeArray[ee-1] + "</p>";
+        //console.log(aa-1, bb-1, cc-1, dd-1, ee-1);
+    }
+  }
+  function hideNodeCode(d) {
+      
+  }
+  
   // Toggle children on click.
   function click(d) { //so children aren't behaving
+    if (d.open === 1) {
+        console.log("it's open");
+        d.open = 0;
+    } else {
+        console.log("CLOSED");
+        d.open = 1;
+    }
     if (d.children) {
         d._children = d.children;
-        d.children = null;
-            
-      } else {
+        d.children = null;    
+    } else {
         d.children = d._children;
         d._children = null;
-      }
-    update(d, perfdata, threshold);
+    }
+    
+    d3.select(this).select("path")
+        .attr("d", symbol.type(function(d){
+            if (d.open === 0) {
+                return d3.symbolCircle;
+            } else {
+                return d3.symbolTriangle;
+            }
+        }))
+        .attr('transform', "rotate(-90)")
+        .attr("stroke-dasharray", function(d){ //stroke solid/dashed by direct or not
+          if (d._perfdata) {
+              if (d._perfdata.eval_direct === 1) {
+                  return "3, 3"; 
+              } else if (d._perfdata.eval_direct === -1) {
+                  return "3,1";
+              } else { return "0"; }
+          }
+          return "0";
+        })
+        .style("stroke", "black")
+        .style("fill", oldColor);
+
+    update(d, perfdata, threshold, timetype);
   }
 } 
 
@@ -710,7 +757,7 @@ function prettyprintTime(time) {
     if (timeInSeconds > 1) { //second
         return (timeInSeconds).toFixed(2) + " s";
     }
-    else if (exp == 1) {
+    else if (exp === 1) {
         return (timeInSeconds).toFixed(2) + " s"; //millisecond
     }
     else if ((exp > 1) && (exp <= 4)) {
@@ -728,5 +775,69 @@ function prettyprintTime(time) {
     return timeInSeconds + " s";
     
 }
+
+function toggleSwitchAction() {
+    toggleswitch = document.getElementById("myCheck");
+    (toggleswitch.checked === true) ? timetype = "EXCLUSIVE" : timetype = "INCLUSIVE";
+
+ 
+    svg.selectAll(".node").selectAll("path").transition()
+            .style("fill", function(d){
+            if (d._perfdata) {
+                if (timetype === "EXCLUSIVE") {
+                    //updateLegend(domainValsIn, greatestValIn, timetype);
+                    if (d._perfdata.exclusiveTime < 0) {
+                        console.log(d._perfdata.exclusiveTime);
+                        return "magenta";
+                    }
+                    return colorExTimeScale(d._perfdata.exclusiveTime); //avg_Time
+                } else {
+                    //updateLegend(domainValsEx, greatestValEx, timetype);
+                    return colorInTimeScale(d._perfdata.inclusiveTime);
+                }
+            } else { return "white"; }
+        });
+        
+    (timetype === "EXCLUSIVE") ? x.domain([0,greatestValEx]) : x.domain([0,greatestValIn]); 
+    (timetype === "EXCLUSIVE") ? xAxis.tickValues(domainValsEx) : xAxis.tickValues(domainValsIn);
+    d3.select(".x").transition().call(xAxis);
+    
+    var g = d3.select(".legend");
+    g.select(".domain")
+        .remove();
+    
+    (timetype === "EXCLUSIVE") ? currentColorTimeScale = colorExTimeScale : currentColorTimeScale = colorInTimeScale; 
+    g.selectAll("rect")
+            .data(
+                currentColorTimeScale.range().map(function(color) {
+                var d = currentColorTimeScale.invertExtent(color);
+                if (d[0] === null) d[0] = x.domain()[0];
+                if (d[1] === null) d[1] = x.domain()[1];
+                return d;
+            }))
+            .transition()
+            .attr("x", function(d){ return x(d[0]); })
+            .attr("width", function(d){ return x(d[1]) - x(d[0]); })
+            .style("fill", function(d) {
+                return (timetype === "EXCLUSIVE") ? colorExTimeScale(d[0]) : colorInTimeScale(d[0]);
+    });
+    
+}
+
+function makeCodeArray(physlfile) {
+    codeArray = [];
+    d3.text(physlfile, function(data){
+        codeArray = data.split('\n');
+    });  
+    
+    return codeArray;
+}
+
+  function getLineNum(d) {
+    var locationArray= d.data.name.split("$"); //was "#"
+    var linenum = parseInt(locationArray[locationArray.length - 2]);
+    
+    return linenum;
+  }
 </script>
            
