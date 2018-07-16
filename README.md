@@ -7,13 +7,13 @@ Reingold-Tilford tree:
 # To use
 You will need [Flask](http://flask.pocoo.org/) installed in order to host the web pages for the visualizations. 
 
-This Flask application follows the typical format with a Python file that establishes the browser and hosts the webpages, a `static` folder that holds the data about the trees, and the `templates` folder that holds the HTML files with the Javascript that display the data. 
+This Flask application follows the typical format with a Python file that establishes the browser and hosts the webpages, a `static` folder that holds the data about the trees (as well as `style.css`, `d3.v4.js`, and `d3-tip.js`), and the `templates` folder that holds the HTML files with the Javascript that display the data. 
 
-To use, first save the Newick-formatted tree into a text file and the performance data into a csv. Be sure that the column headers ("count", "time", etc.) are the first line of the csv. Put the text file and csv file into the `static` folder. To run the program, enter `python tree.py static/myperformancedata.csv static/mynewicktree.txt` into the command line. Additionally, if you want to run the codeview version, add the `.physl` filename to the line: `python tree.py static/myperformancedata.csv static/mynewicktree.txt static/myphysl.physl`.
+To use, first save the Newick-formatted tree into a text file and the performance data into a csv. Be sure that the column headers ("count", "time", etc.) are the first line of the csv. Put the text file and csv file into the `static` folder. Also copy the algorithm `.physl` file into the `static` folder. To run the program, enter `python tree.py static/myperformancedata.csv static/mynewicktree.txt static/myalg.physl` into the command line. 
 
-# Example
+# ALS Example
 
-In `static` are the test files that I used. The performance data is stored in `20180625_perfdata_alsmovie.csv`. The tree structure is stored in `20180625_treeformat_alsmovie.txt`. The physl file is `als.physl`. The full command: `python tree.py static/20180625_perfdatalsmovie.csv static/20180625_treeformat_alsmovie.txt static/als.physl`. If things run properly, you should see 
+In `static` are the test files that I used. The performance data is stored in `20180713_als_perfdata.csv`. The tree structure is stored in `20180713_als_tree.txt`. The physl file is `als2.physl`. The full command: `python tree.py static/20180713_als_tree.txt static/20180713_als_perfdata.csv static/als2.physl`. If things run properly, you should see 
 ```
  * Running on http://0.0.0.0:8001/ (Press CTRL+C to quit)
  * Restarting with stat
@@ -22,9 +22,9 @@ In `static` are the test files that I used. The performance data is stored in `2
 127.0.0.1 - - [29/Jun/2018 16:16:45] "GET /codeview HTTP/1.1" 200 -
 127.0.0.1 - - [29/Jun/2018 16:16:45] "GET /codeview HTTP/1.1" 200 -
 ```
-and see the tree at http://0.0.0.0:8001/.
+and see the tree by clicking `Reingold-Tilford tree` at the top of the page at http://0.0.0.0:8001/.
 
 # Known issues
-In this version of Indented Rectangles tree (), collapsing nodes via clicking does not work (likely linked to coloring issues).
+
 
 
