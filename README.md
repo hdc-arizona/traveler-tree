@@ -1,4 +1,4 @@
-# expression-trees
+# traveler-tree
 Generating d3 expression tree visualizations with Newick-formatted trees.
 
 Reingold-Tilford tree:
