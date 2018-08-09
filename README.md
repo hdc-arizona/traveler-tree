@@ -26,6 +26,11 @@ Commit HPX: 5171fb3
 
 Commit Phylanx: 60d9099
 
+# Docker help
+To run the docker image, be sure to use the following flags so that the port is recognized:
+```
+docker run -it -p 8001:8001 [docker-file-name]
+```
 
 # ALS Example
 In `static` are the test files that I used. The performance data is stored in `20180713_als_perfdata.csv`. The tree structure is stored in `20180713_als_tree.txt`. The algorithm file is `als_csv_instrumented.cpp`. The full command: `python tree.py static/20180713_als_tree.txt static/20180713_als_perfdata.csv static/als_csv_instrumented.cpp`. If things run properly, you should see 
